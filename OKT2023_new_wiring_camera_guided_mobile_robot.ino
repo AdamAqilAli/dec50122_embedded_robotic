@@ -1,3 +1,8 @@
+//dec50122 embedded robotic
+//esp32+shield, l298n, maker line, pixy2, sr04, 4wheel chassis
+//nov 2023
+//camera/vision guided mobile robot
+
 #include <Pixy2.h>
 #include <SPI.h>
 
