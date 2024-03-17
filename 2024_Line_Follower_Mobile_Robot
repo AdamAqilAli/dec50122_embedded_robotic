@@ -1,0 +1,112 @@
+//dec50122 embedded robotic
+//esp32+shield, l298n, maker line, pixy2, sr04, 4wheel chassis
+//nov 2023
+//line follower mobile robot
+
+//pin mapping
+#define line_sensor 35  //maker line
+#define miso  19  //pixy2
+#define sck   18  
+#define ss    5 
+#define mosi  23
+#define echo  13
+#define trig  14  //sr04
+#define ena   21
+#define in1   17  //l298n
+#define in2   16
+#define in3   4
+#define in4   2
+#define enb   15  
+#define encoder_right 32 //encoder
+#define encoder_left  33  
+#define laju  200 //robot max speed
+#define jarak_depan 15  //object infront in cm
+
+//for line follower
+int adcMakerLine = 0;
+int adcSetPoint = 0;
+int proportional = 0;
+int lastProportional = 0;
+int derivative = 0;
+int powerDifference = 0;
+
+void setup() {
+  // Your existing setup code
+  Serial.begin(115200); //for serial monitor
+  pinMode(line_sensor, INPUT); //line sensor analog
+  pinMode(miso, OUTPUT);  //miso pixy2
+  pinMode(sck, OUTPUT);//sck
+  pinMode(ss, OUTPUT); //ss 
+  pinMode(mosi, OUTPUT); //mosi
+  pinMode(echo, INPUT); //echo sr04
+  pinMode(trig, OUTPUT); //trig
+  pinMode(ena, OUTPUT); //ena l298n
+  pinMode(in1, OUTPUT); //in1
+  pinMode(in2, OUTPUT); //in2
+  pinMode(in3, OUTPUT); //in3
+  pinMode(in4, OUTPUT); //in4
+  pinMode(enb, OUTPUT); //enb
+  pinMode(encoder_right, INPUT); //encoder m right
+  pinMode(encoder_left, INPUT); //encoder m left
+  // Place robot at the center of line. as robot referrence point
+  adcSetPoint = analogRead(line_sensor);
+  delay(1000);
+}
+
+int leftSpeed = 0;
+int rightSpeed = 0;
+
+void motorControl(int leftSpeed, int rightSpeed) {
+  analogWrite(ena, abs(leftSpeed));
+  analogWrite(enb, abs(rightSpeed));
+
+  if (leftSpeed > 0) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+  } else {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+  }
+
+  if (rightSpeed > 0) {
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+  } else {
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, HIGH);
+  }
+}
+
+void loop() {
+  adcMakerLine = analogRead(line_sensor); // Read analog sensor
+  Serial.println(adcMakerLine);
+
+  //tukar nilai 51 kpd nilai adc pada bacaan paling kiri
+  if (adcMakerLine < 51) { // Out of line
+    motorControl(0, 0);
+  } else {
+    // Calculate proportional error
+    proportional = adcMakerLine - adcSetPoint;
+
+    // Calculate power difference
+    //tukar nilai 1400 kpd nilai adc pada bacaan paling kiri
+    //tukar nilai 4095 kpd nilai adc pada bacaan paling kanan
+    powerDifference = map(proportional, 1400, 4095, -laju, laju);
+
+    // Limit power difference within maximum speed
+    powerDifference = constrain(powerDifference, -laju, laju);
+
+    // Adjust motor speeds based on power difference
+    leftSpeed = laju + powerDifference;
+    rightSpeed = laju - powerDifference;
+
+    motorControl(leftSpeed, rightSpeed);
+
+    Serial.print("ADC:\t");
+    Serial.print(adcMakerLine);
+    Serial.print("\tMotor Left:\t");
+    Serial.print(leftSpeed);
+    Serial.print("\tMotor Right:\t");
+    Serial.println(rightSpeed);
+  }
+}
