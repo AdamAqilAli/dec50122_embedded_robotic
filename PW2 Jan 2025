@@ -1,0 +1,74 @@
+// Motor control pins
+#define ena 21
+#define in1 17
+#define in2 16
+#define in3 4
+#define in4 2
+#define enb 15
+
+void setup() {
+  // Set the motor control pins as OUTPUT
+  pinMode(ena, OUTPUT);
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+  Serial.begin(9600); // Initialize serial communication for debugging
+}
+
+void motorControl(int leftSpeed, int rightSpeed) {
+  // Set motor speeds using PWM (analogWrite)
+  analogWrite(ena, abs(leftSpeed));
+  analogWrite(enb, abs(rightSpeed));
+
+  // Set motor directions based on speed signs
+  if (leftSpeed > 0) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+  } else {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+  }
+
+  if (rightSpeed > 0) {
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+  } else {
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, HIGH);
+  }
+}
+
+void stopMotors() {// Stop both motors
+  analogWrite(ena, 0);
+  analogWrite(enb, 0);
+}
+
+void loop() {
+  motorControl(255, 255);   // Forward movement
+  delay(2000); // Move forward for 2 seconds
+
+  stopMotors();   // Stop the motors
+  delay(1000); // Pause for 1 second
+
+  motorControl(-255, -255);   // Reverse movement
+  delay(2000); // Move backward for 2 seconds
+
+  stopMotors();   // Stop the motors
+  delay(1000); // Pause for 1 second
+
+  // Turn left
+  motorControl(-150, 150); // Adjust the speeds for turning
+  delay(1000); // Turn for 1 second
+
+  stopMotors();   // Stop the motors
+  delay(1000); // Pause for 1 second
+
+  // Turn right
+  motorControl(150, -150); // Adjust the speeds for turning
+  delay(1000); // Turn for 1 second
+
+  stopMotors();   // Stop the motors
+  delay(1000); // Pause for 1 second
+}
+
