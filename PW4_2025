@@ -1,0 +1,111 @@
+// Centered Line Follower with Balanced Wheel Speeds - Corrected Version
+// ESP32 + L298N + Maker Line Sensor
+
+// Pin Mapping
+#define LINE_SENSOR 35     // Maker line sensor (analog)
+#define ENA 21             // L298N motor driver
+#define IN1 17
+#define IN2 16
+#define IN3 4
+#define IN4 2
+#define ENB 15  
+
+// Speed Settings
+#define BASE_SPEED 80     // Base speed (0-255)
+#define MAX_SPEED 120      // Maximum motor speed
+#define MIN_SPEED 20       // Minimum motor speed
+
+// PID Constants
+#define KP 0.6             // Proportional gain
+#define KD 0.3             // Derivative gain
+
+// Calibration
+int calibratedMin = 4095;
+int calibratedMax = 0;
+const int CALIBRATION_READINGS = 100;
+
+// PID Variables
+int lastError = 0;         // Added missing declaration
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize pins
+  pinMode(LINE_SENSOR, INPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+  
+  // Calibrate sensor
+  calibrateSensor();
+  
+  Serial.println("Calibration Complete");
+  Serial.print("Min: "); Serial.println(calibratedMin);
+  Serial.print("Max: "); Serial.println(calibratedMax);
+  delay(1000);
+}
+
+void loop() {
+  int sensorValue = analogRead(LINE_SENSOR);
+  int normalizedValue = map(sensorValue, calibratedMin, calibratedMax, 0, 1000);
+  
+  // PID control
+  int error = normalizedValue - 500; // Center is at 500
+  int controlSignal = KP * error + KD * (error - lastError);
+  lastError = error;
+
+  // Calculate motor speeds with center balance
+  int leftSpeed = BASE_SPEED + controlSignal;
+  int rightSpeed = BASE_SPEED - controlSignal;
+  
+  // Constrain speeds
+  leftSpeed = constrain(leftSpeed, MIN_SPEED, MAX_SPEED);
+  rightSpeed = constrain(rightSpeed, MIN_SPEED, MAX_SPEED);
+
+  // Apply motor speeds
+  setMotorSpeeds(leftSpeed, rightSpeed);
+
+  // Debug output
+  Serial.print("Sensor: ");
+  Serial.print(sensorValue);
+  Serial.print(" Norm: ");
+  Serial.print(normalizedValue);
+  Serial.print(" Error: ");
+  Serial.print(error);
+  Serial.print(" L: ");
+  Serial.print(leftSpeed);
+  Serial.print(" R: ");
+  Serial.println(rightSpeed);
+  
+  delay(20);
+}
+
+void calibrateSensor() {
+  Serial.println("Calibrating sensor...");
+  
+  for (int i = 0; i < CALIBRATION_READINGS; i++) {
+    int val = analogRead(LINE_SENSOR);
+    calibratedMin = min(calibratedMin, val);
+    calibratedMax = max(calibratedMax, val);
+    delay(10);
+  }
+  
+  // Add safety margin
+  calibratedMin = max(0, calibratedMin - 50);
+  calibratedMax = min(4095, calibratedMax + 50);
+}
+
+void setMotorSpeeds(int leftSpeed, int rightSpeed) {
+  // Left motor
+  analogWrite(ENA, leftSpeed);
+  digitalWrite(IN1, leftSpeed > 0 ? HIGH : LOW);
+  digitalWrite(IN2, leftSpeed > 0 ? LOW : HIGH);
+  
+  // Right motor
+  analogWrite(ENB, rightSpeed);
+  digitalWrite(IN3, rightSpeed > 0 ? HIGH : LOW);
+  digitalWrite(IN4, rightSpeed > 0 ? LOW : HIGH);
+}
